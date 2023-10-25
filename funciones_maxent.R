@@ -69,3 +69,4 @@ getAICs <- function(modelfile) {
   outfile <- gsub(".csv", "_model_select.csv", modelfile)
   write.csv(AICs, outfile, row.names=FALSE)
 }
+

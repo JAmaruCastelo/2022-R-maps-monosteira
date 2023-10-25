@@ -6,7 +6,7 @@ libraries (c("dismo", "maps", "maptools", "rgdal", "rgeos", "sp", "virtualspecie
              "raster", "usdm", "gtools", "tidyverse", "rJava", "ENMeval", "rgbif",
              "ENMTools", "geodata", "devtools", "RStoolbox", "glue", "rmaxent", "ENMeval",
              "sf", "xlsx", "rgl"))
-
+library ("stats")
 ########### VARIABLES CLIMATICAS A UTILIZARSE EN LA COMPARACION DE CADA UNO DE LOS PUNTOS ##################
 
 rasters<- worldclim_global("bio", res=5, path="C:/Users/amaru/OneDrive/Escritorio/worldclim")
@@ -15,33 +15,39 @@ rasters<- worldclim_global("bio", res=5, path="C:/Users/amaru/OneDrive/Escritori
 ### ABRIMOS LOS DATOS CLIMATICOS DE LAS LOCALIDADES QUE SE VAN A COMPARAR ################################
 #####################################################################################################
 ##### PUNTOS EN LA REGION PALEARTICA
-latitud_longitud<-read_csv("C:/Users/amaru/OneDrive/Escritorio/CODES/00017_JAC_monosteira/Bases_de_datos_registros_puntuales/nueva_calcular/Monosteira_unicostata_registros_puntuales_data.csv")
-latitud_longitud<-latitud_longitud[c("long","lat")] 
-vector_palea<-vect(latitud_longitud, geom=c("long","lat"))
+latitud_longitud<-read_csv("D:/0001_JAC_monosteira/Bases_de_datos_registros_puntuales/paleartico_clean.csv")
+latitud_longitud<-latitud_longitud[c("Longitud","Latitud")] 
+vector_palea<-vect(latitud_longitud, geom=c("Longitud","Latitud"))
 
 
 ##### PUNTOS EN AMERICA LATINA ###########################################################
-latitud_longitud2<-read_csv("C:/Users/amaru/OneDrive/Escritorio/CODES/00017_JAC_monosteira/Bases_de_datos_registros_puntuales/puntos_externos.csv")
-latitud_longitud2<-latitud_longitud2[c("longitude","latitude")] 
-vector<-vect(latitud_longitud2, geom=c("longitude","latitude"))
+latitud_longitud2<-read_csv("D:/0001_JAC_monosteira/Bases_de_datos_registros_puntuales/introduced_clean.csv")
+latitud_longitud2<-latitud_longitud2[c("Longitud","Latitud")]
+vector<-vect(latitud_longitud2, geom=c("Longitud","Latitud"))
 
 ##### analisis de boxplot de cada variable ambiental #################################################
 #### para detectar en que variable es la que esta cambiando el rango original de no original#####
 ##################################################################################################
-path="C:/Users/amaru/OneDrive/Escritorio/CODES/00017_JAC_monosteira/Boxplot_variables"
+path="D:/0001_JAC_monosteira/Boxplot_variables"
 setwd(path)
 
 #### primero se debe setar donde se quiere guardar cada una de las variables necesarias
-
+names=c()
+statistic=c()
+p_value=c()
 for (e in names(rasters)){
   name=e
-  bio_1<-raster::extract(rasters[[name]],monosteira$presence.points)
+  names<-c(names,name)
+  bio_1<-raster::extract(rasters[[name]],vector_palea)
   bio_1b<-raster::extract(rasters[[name]],vector)
   df<-data.frame("paleartico"=bio_1[name])
   colnames(df)<-"Paleartico"
   stacked_df <- stack(df)
   df2<-data.frame("introduced"=bio_1b[name])
   colnames(df2)<-"Introduced"
+  wil<-wilcox.test (df$Paleartico, df2$Introduced)
+  statistic<-c(statistic,wil$statistic)
+  p_value=c(p_value,wil$p.value )
   stacked_df2 <- stack(df2)
   DatosTotal = rbind(stacked_df, stacked_df2 )
   if (e=="wc2.1_5m_bio_1"){
@@ -85,5 +91,44 @@ for (e in names(rasters)){
                                         name2="Precip (mm)"}
   windowsFonts(A = windowsFont("Times New Roman"))
   boxplot(DatosTotal$values ~ DatosTotal$ind, xlab=namep, ylab=name2,family = "A")}
+
+bb<-cbind(names, statistic, p_value)
+write.csv(bb,"satistic.csv")
+
+################################################################################################
+######### para solo extraer los puntos y crear los graficos en Python #########################
+#################################################################################################
+
+
+mat = matrix(ncol = 1, nrow = 386)
+natural=data.frame(mat)
+mat2 = matrix(ncol = 1, nrow = 15)
+introduced=data.frame(mat2)
+for (e in names(rasters)){
+  print (e)
+  name=e
+  bio_1<-raster::extract(rasters[[name]],vector_palea)
+  bio_1<-bio_1[name]
+  natural = cbind(natural, bio_1 )
+  
+  bio_1b<-raster::extract(rasters[[name]],vector)
+  bio_1b<-bio_1b[name]
+  introduced = cbind(introduced, bio_1b )
+}
+
+write.csv(natural,"natural.csv")
+write.csv(introduced,"introduced.csv")
+
+#### extraemos para el punto de ontario, para analizarlo mas adelante
+
+
+ontario<-data.frame(c(-80.6278999999999),c(43.4018999999999))
+colnames(ontario)<-c("Longitud","Latitud")
+vector<-vect(ontario, geom=c("Longitud","Latitud"))
+bio_ontario<-raster::extract(rasters,vector)
+
+write.csv(bio_ontario,"bio_ontario.csv")
+
+###### ver el codigo en python para ver si se puede jugar con este analisis y meter mas cosas.
 
 ####### se debe guardar manualmente cada una de las imagenes, aun no se tiene el codigo que te permita guardar automaticament cada una de las variables de estudio

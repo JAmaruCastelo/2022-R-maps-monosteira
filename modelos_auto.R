@@ -1,4 +1,6 @@
 
+path_w="C:/Users/amaru/OneDrive/Escritorio/CODES/00017_JAC_monosteira/Modelos_Maxent/Maxent_introduced/Modelos"
+setwd(path_w)
 print("corriendo 1/56")
 modelo<-enmtools.maxent(monosteira, pca1$rasters,
                         path=glue("{path_w}/H1"),
@@ -617,3 +619,4 @@ modelo<-enmtools.maxent(monosteira, pca1$rasters,
                                'hinge=true',
                                "outputformat=logistic",
                                "autofeature=false"))
+
